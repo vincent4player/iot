@@ -1,0 +1,2 @@
+[2025-04-08 08:23:21][INFO] Client MQTT initialisé avec les paramètres : host=broker.hivemq.com, port=1883, topic=ynov/bordeaux
+[2025-04-08 08:23:21][ERROR] L'extension PHP 'sockets' n'est pas disponible

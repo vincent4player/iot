@@ -8,6 +8,11 @@
  */
 function init_database() {
     try {
+        // Vérifier que le répertoire data existe
+        if (!is_dir(DATA_PATH)) {
+            mkdir(DATA_PATH, 0777, true);
+        }
+        
         $db = new SQLite3(DB_PATH);
         
         // Création de la table pour stocker les données MQTT
@@ -20,7 +25,7 @@ function init_database() {
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )');
         
-        // Création de la table pour stocker les données OpenWeatherMap
+        // Création de la table pour stocker les données météo externes
         $db->exec('CREATE TABLE IF NOT EXISTS weather_data (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             city_name TEXT,
@@ -34,16 +39,27 @@ function init_database() {
         $db->close();
         return true;
     } catch (Exception $e) {
-        log_message('Erreur lors de l\'initialisation de la base de données: ' . $e->getMessage(), 'ERROR');
+        logMessage('Erreur lors de l\'initialisation de la base de données: ' . $e->getMessage(), 'ERROR');
         return false;
     }
 }
 
 /**
- * Récupère les données météo à partir de l'API OpenWeatherMap
+ * Récupère les données météo à partir d'une API externe
+ * Cette fonction est désactivée car l'API key n'est pas configurée
  */
 function get_weather_data($city) {
-    $url = OPENWEATHERMAP_API_URL . "?q=$city&units=metric&lang=fr&appid=" . OPENWEATHERMAP_API_KEY;
+    logMessage("La fonction get_weather_data est désactivée car l'API key n'est pas configurée", 'INFO');
+    return null;
+    
+    /* API non configurée - Code laissé pour référence
+    $api_key = env('OPENWEATHERMAP_API_KEY', '');
+    if (empty($api_key)) {
+        logMessage("API key OpenWeatherMap non configurée", 'ERROR');
+        return null;
+    }
+    
+    $url = "https://api.openweathermap.org/data/2.5/weather?q=$city&units=metric&lang=fr&appid=$api_key";
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
@@ -53,14 +69,14 @@ function get_weather_data($city) {
     curl_close($ch);
     
     if ($http_code !== 200) {
-        log_message("Erreur lors de la récupération des données météo pour $city. Code HTTP: $http_code", 'ERROR');
+        logMessage("Erreur lors de la récupération des données météo pour $city. Code HTTP: $http_code", 'ERROR');
         return null;
     }
     
     $data = json_decode($response, true);
     
     if (!$data) {
-        log_message("Erreur lors du décodage des données météo pour $city", 'ERROR');
+        logMessage("Erreur lors du décodage des données météo pour $city", 'ERROR');
         return null;
     }
     
@@ -68,6 +84,7 @@ function get_weather_data($city) {
     save_weather_data($data);
     
     return $data;
+    */
 }
 
 /**
@@ -91,7 +108,7 @@ function save_weather_data($data) {
         
         return true;
     } catch (Exception $e) {
-        log_message('Erreur lors de l\'enregistrement des données météo: ' . $e->getMessage(), 'ERROR');
+        logMessage('Erreur lors de l\'enregistrement des données météo: ' . $e->getMessage(), 'ERROR');
         return false;
     }
 }
@@ -116,7 +133,7 @@ function save_mqtt_data($temperature, $humidity, $station_name, $station_city) {
         
         return true;
     } catch (Exception $e) {
-        log_message('Erreur lors de l\'enregistrement des données MQTT: ' . $e->getMessage(), 'ERROR');
+        logMessage('Erreur lors de l\'enregistrement des données MQTT: ' . $e->getMessage(), 'ERROR');
         return false;
     }
 }
@@ -151,16 +168,33 @@ function get_mqtt_history($hours = 24) {
         
         return $data;
     } catch (Exception $e) {
-        log_message('Erreur lors de la récupération de l\'historique MQTT: ' . $e->getMessage(), 'ERROR');
+        logMessage('Erreur lors de la récupération de l\'historique MQTT: ' . $e->getMessage(), 'ERROR');
         return null;
     }
 }
 
 /**
  * Retourne les coordonnées géographiques d'une ville
+ * Cette fonction est désactivée car l'API key n'est pas configurée
  */
 function get_city_coordinates($city) {
-    $url = "https://api.openweathermap.org/geo/1.0/direct?q=$city&limit=1&appid=" . OPENWEATHERMAP_API_KEY;
+    logMessage("La fonction get_city_coordinates est désactivée car l'API key n'est pas configurée", 'INFO');
+    
+    // Retourner des coordonnées par défaut pour Bordeaux
+    if (strtolower($city) === 'bordeaux') {
+        return ['lat' => 44.8378, 'lon' => -0.5792];
+    }
+    
+    return null;
+    
+    /* API non configurée - Code laissé pour référence
+    $api_key = env('OPENWEATHERMAP_API_KEY', '');
+    if (empty($api_key)) {
+        logMessage("API key OpenWeatherMap non configurée", 'ERROR');
+        return null;
+    }
+    
+    $url = "https://api.openweathermap.org/geo/1.0/direct?q=$city&limit=1&appid=$api_key";
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
@@ -170,18 +204,19 @@ function get_city_coordinates($city) {
     curl_close($ch);
     
     if ($http_code !== 200) {
-        log_message("Erreur lors de la récupération des coordonnées pour $city. Code HTTP: $http_code", 'ERROR');
+        logMessage("Erreur lors de la récupération des coordonnées pour $city. Code HTTP: $http_code", 'ERROR');
         return null;
     }
     
     $data = json_decode($response, true);
     
     if (!$data || empty($data)) {
-        log_message("Aucune coordonnée trouvée pour $city", 'ERROR');
+        logMessage("Aucune coordonnée trouvée pour $city", 'ERROR');
         return null;
     }
     
     return ['lat' => $data[0]['lat'], 'lon' => $data[0]['lon']];
+    */
 }
 
 // Initialisation de la base de données au chargement de la page

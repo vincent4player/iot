@@ -1,14 +1,26 @@
 <?php
 require_once 'includes/config.php';
+require_once 'includes/database.php';
 require_once 'includes/functions.php';
+
+// Activer l'affichage des erreurs en mode debug
+if (isDebug()) {
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+}
+
+// Initialiser la base de données
+if (function_exists('init_database')) {
+    init_database();
+}
 
 // Vérifier si le client MQTT est déjà en cours d'exécution
 $mqttRunning = false;
-$lockFile = __DIR__ . '/logs/mqtt.lock';
+$lockFile = LOGS_PATH . '/mqtt.lock';
 
 // Créer le répertoire logs s'il n'existe pas
-if (!is_dir(__DIR__ . '/logs')) {
-    mkdir(__DIR__ . '/logs', 0777, true);
+if (!is_dir(LOGS_PATH)) {
+    mkdir(LOGS_PATH, 0777, true);
 }
 
 // Vérifier si le fichier de verrouillage existe et s'il est récent (moins de 5 minutes)
@@ -39,6 +51,22 @@ if (!$mqttRunning) {
     
     // Marquer comme en cours d'exécution
     $mqttRunning = true;
+}
+
+// Récupérer les dernières données MQTT
+$mqttDataFile = DATA_PATH . '/mqtt_data.json';
+$mqttData = [
+    'temperature' => null,
+    'humidity' => null,
+    'lastUpdate' => null
+];
+
+if (file_exists($mqttDataFile)) {
+    $content = file_get_contents($mqttDataFile);
+    $decodedData = json_decode($content, true);
+    if ($decodedData) {
+        $mqttData = $decodedData;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -93,15 +121,15 @@ if (!$mqttRunning) {
                             <div class="mqtt-data">
                                 <div class="data-item">
                                     <i class="fas fa-temperature-high"></i>
-                                    <span id="mqtt-temperature">--</span> °C
+                                    <span id="mqtt-temperature"><?php echo $mqttData['temperature'] !== null ? number_format($mqttData['temperature'], 1) : '--'; ?></span> °C
                                 </div>
                                 <div class="data-item">
                                     <i class="fas fa-tint"></i>
-                                    <span id="mqtt-humidity">--</span> %
+                                    <span id="mqtt-humidity"><?php echo $mqttData['humidity'] !== null ? number_format($mqttData['humidity'], 1) : '--'; ?></span> %
                                 </div>
                                 <div class="data-item small">
                                     <i class="fas fa-clock"></i>
-                                    Dernière mise à jour: <span id="mqtt-last-update">--</span>
+                                    Dernière mise à jour: <span id="mqtt-last-update"><?php echo $mqttData['lastUpdate'] ?? '--'; ?></span>
                                 </div>
                             </div>
                         </div>
