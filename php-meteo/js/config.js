@@ -2,13 +2,15 @@
  * Configuration de l'application météo
  */
 const CONFIG = {
-    // Configuration MQTT
+    // ========== CONFIGURATION MQTT - MODIFIER CES VALEURS ==========
+    // Configuration MQTT pour le client web (WebSocket)
     mqtt: {
-        host: 'broker.emqx.io',
-        port: 8083, // Port WebSocket
-        clientId: 'web_' + Math.random().toString(16).substr(2, 8),
-        topic: 'ynovbdxb2/meteo'
+        host: 'broker.emqx.io',                        // Adresse du broker MQTT
+        port: 8083,                                     // Port WebSocket (généralement 8083 ou 8083)
+        clientId: 'web_' + Math.random().toString(16).substr(2, 8), // ID client aléatoire
+        topic: 'ynovbdxb2/meteo'                        // Topic à écouter (doit correspondre au fichier config.php)
     },
+    // ==============================================================
     
     // Configuration de la carte
     map: {

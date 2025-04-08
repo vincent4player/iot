@@ -14,11 +14,13 @@ define('OPENWEATHERMAP_API_URL', 'https://api.openweathermap.org/data/2.5/weathe
 // Configuration de la base de données SQLite
 define('DB_PATH', __DIR__ . '/../db/meteo.db');
 
-// Configuration MQTT
-define('MQTT_HOST', 'broker.emqx.io');
-define('MQTT_PORT', 1883);
-define('MQTT_CLIENT_ID', 'mqttx_f6c62fdf');
-define('MQTT_TOPIC', 'ynovbdxb2/meteo');
+// ========== CONFIGURATION MQTT - MODIFIER CES VALEURS ==========
+// Paramètres de connexion au broker MQTT
+define('MQTT_HOST', 'broker.emqx.io');          // Adresse du broker MQTT
+define('MQTT_PORT', 1883);                       // Port du broker MQTT (généralement 1883)
+define('MQTT_CLIENT_ID', 'mqttx_f6c62fdf');     // ID client unique
+define('MQTT_TOPIC', 'ynovbdxb2/meteo');        // Topic à écouter
+// ==============================================================
 
 // Erreur de reporting
 if (DEBUG_MODE) {

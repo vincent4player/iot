@@ -1,6 +1,21 @@
 <?php
 require_once 'includes/config.php';
 require_once 'includes/functions.php';
+
+// Lancer le client MQTT en arrière-plan (uniquement si ce n'est pas déjà fait)
+$mqttRunning = false;
+exec("ps aux | grep mqtt_listener.php | grep -v grep", $output);
+if (empty($output)) {
+    // Sur Windows
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        pclose(popen("start /B php mqtt_listener.php > logs/mqtt.log 2>&1", "r"));
+    } 
+    // Sur Linux/Unix
+    else {
+        exec("php mqtt_listener.php > logs/mqtt.log 2>&1 &");
+    }
+    $mqttRunning = true;
+}
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -14,6 +29,10 @@ require_once 'includes/functions.php';
 </head>
 <body>
     <div class="container">
+        <?php if ($mqttRunning): ?>
+        <div id="status-message" class="status success">Client MQTT démarré en arrière-plan</div>
+        <?php endif; ?>
+        
         <header>
             <h1>Station Météo en temps réel</h1>
         </header>

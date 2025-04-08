@@ -9,6 +9,7 @@ Une application web PHP qui affiche les données de température et d'humidité 
 - Graphiques d'historique pour la température et l'humidité
 - Stockage des données dans une base SQLite
 - Personnalisation de la station MQTT (nom et ville)
+- Lancement automatique du client MQTT en arrière-plan
 
 ## Prérequis
 
@@ -25,28 +26,49 @@ Une application web PHP qui affiche les données de température et d'humidité 
    git clone https://github.com/votre-utilisateur/station-meteo-mqtt.git
    ```
 
-2. Assurez-vous que le dossier `db` est accessible en écriture par le serveur web :
+2. Assurez-vous que les dossiers `db` et `logs` sont accessibles en écriture par le serveur web :
    ```
-   chmod 777 db
+   chmod 777 db logs
    ```
 
-3. Modifiez le fichier `includes/config.php` pour configurer vos paramètres :
-   - Remplacez `VOTRE_CLE_API` par votre clé API OpenWeatherMap
-   - Ajustez les paramètres MQTT si nécessaire
+3. Modifiez les fichiers de configuration pour vos paramètres :
+   - `includes/config.php` : Remplacez les paramètres MQTT et votre clé API OpenWeatherMap
+   - `js/config.js` : Modifiez les paramètres MQTT pour le client WebSocket
 
 4. Ouvrez l'application dans votre navigateur :
    ```
    http://localhost/php-meteo/
    ```
 
-## Configuration
+## Configuration MQTT
 
-### Configuration MQTT
+### Où modifier les paramètres MQTT
 
-Par défaut, l'application est configurée pour se connecter au broker MQTT public `broker.emqx.io` et s'abonner au topic `ynovbdxb2/meteo`. Vous pouvez modifier ces paramètres dans les fichiers :
+Les paramètres de connexion MQTT doivent être configurés à deux endroits :
 
-- `includes/config.php` (côté serveur)
-- `js/config.js` (côté client)
+1. **Côté serveur** : dans le fichier `includes/config.php`
+   ```php
+   define('MQTT_HOST', 'broker.emqx.io');          // Adresse du broker MQTT
+   define('MQTT_PORT', 1883);                       // Port du broker MQTT (généralement 1883)
+   define('MQTT_CLIENT_ID', 'mqttx_f6c62fdf');     // ID client unique
+   define('MQTT_TOPIC', 'ynovbdxb2/meteo');        // Topic à écouter
+   ```
+
+2. **Côté client** : dans le fichier `js/config.js`
+   ```javascript
+   mqtt: {
+       host: 'broker.emqx.io',                        // Adresse du broker MQTT
+       port: 8083,                                     // Port WebSocket (généralement 8083)
+       clientId: 'web_' + Math.random().toString(16).substr(2, 8), // ID client aléatoire
+       topic: 'ynovbdxb2/meteo'                        // Topic à écouter
+   }
+   ```
+
+> **Important** : Assurez-vous que le `topic` est identique dans les deux fichiers.
+
+### Client MQTT automatique
+
+Le client MQTT PHP est lancé automatiquement en arrière-plan lorsque vous chargez la page `index.php`. Vous n'avez pas besoin de le démarrer manuellement. Les logs du client MQTT sont enregistrés dans le fichier `logs/mqtt.log`.
 
 ### Configuration de l'API météo
 
@@ -61,20 +83,6 @@ L'interface utilisateur est divisée en plusieurs parties :
 1. **Carte** : Affiche les marqueurs pour les grandes villes françaises avec leurs données météo, ainsi qu'un marqueur spécial pour la station MQTT.
 2. **Station MQTT** : Affiche les dernières données reçues via MQTT et permet de configurer le nom et la ville de la station.
 3. **Graphiques** : Affichent l'historique de température et d'humidité des dernières 24 heures.
-
-### Script d'écoute MQTT
-
-Un script PHP est inclus pour écouter en permanence le broker MQTT et stocker les données dans la base de données. Pour le lancer en arrière-plan :
-
-```
-php mqtt_listener.php > mqtt.log 2>&1 &
-```
-
-Pour Windows (ligne de commande) :
-
-```
-start /B php mqtt_listener.php > mqtt.log
-```
 
 ## Structure du projet
 
@@ -102,8 +110,8 @@ php-meteo/
 │
 ├── logs/                       # Répertoire pour les logs (créé automatiquement)
 │
-├── index.php                   # Page principale
-├── mqtt_listener.php           # Script d'écoute MQTT en arrière-plan
+├── index.php                   # Page principale et démarrage du client MQTT
+├── mqtt_listener.php           # Script d'écoute MQTT utilisé en arrière-plan
 └── README.md                   # Ce fichier
 ```
 
