@@ -2,8 +2,6 @@
 
 Un tableau de bord météorologique interactif affichant les données météorologiques en temps réel pour la France.
 
-![Capture d'écran du dashboard](/screenshot.png)
-
 ## Fonctionnalités
 
 - **Carte interactive de la France** avec des marqueurs pour les principales villes
