@@ -1,0 +1,50 @@
+# Fichiers d'environnement
+.env
+.env.*
+!.env.example
+
+# Fichiers de logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Fichiers de données
+data/
+*.json
+!package.json
+!package-lock.json
+
+# Dépendances
+/vendor/
+/node_modules/
+
+# Fichiers de build
+/build/
+/dist/
+/out/
+
+# Fichiers de cache
+.cache/
+.temp/
+*.cache
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Fichiers IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Fichiers de test
+/coverage/
+/tests/coverage/
+
+# Fichiers de configuration locaux
+config.local.php
+*.local.php 

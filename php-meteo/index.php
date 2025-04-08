@@ -2,18 +2,42 @@
 require_once 'includes/config.php';
 require_once 'includes/functions.php';
 
-// Lancer le client MQTT en arrière-plan (uniquement si ce n'est pas déjà fait)
+// Vérifier si le client MQTT est déjà en cours d'exécution
 $mqttRunning = false;
-exec("ps aux | grep mqtt_listener.php | grep -v grep", $output);
-if (empty($output)) {
-    // Sur Windows
-    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-        pclose(popen("start /B php mqtt_listener.php > logs/mqtt.log 2>&1", "r"));
-    } 
-    // Sur Linux/Unix
-    else {
-        exec("php mqtt_listener.php > logs/mqtt.log 2>&1 &");
+$lockFile = __DIR__ . '/logs/mqtt.lock';
+
+// Créer le répertoire logs s'il n'existe pas
+if (!is_dir(__DIR__ . '/logs')) {
+    mkdir(__DIR__ . '/logs', 0777, true);
+}
+
+// Vérifier si le fichier de verrouillage existe et s'il est récent (moins de 5 minutes)
+if (file_exists($lockFile)) {
+    $lockTime = filemtime($lockFile);
+    if (time() - $lockTime < 300) { // 5 minutes = 300 secondes
+        $mqttRunning = true;
+    } else {
+        // Le verrou est trop ancien, on le supprime
+        unlink($lockFile);
     }
+}
+
+// Si le client MQTT n'est pas en cours d'exécution, on le démarre
+if (!$mqttRunning) {
+    // Créer le fichier de verrouillage
+    file_put_contents($lockFile, date('Y-m-d H:i:s'));
+    
+    // Définir les permissions du fichier de verrouillage
+    chmod($lockFile, 0666);
+    
+    // Inclure le client MQTT directement
+    require_once 'includes/mqtt_client.php';
+    
+    // Initialiser le client MQTT
+    $mqttClient = new MqttClient();
+    $mqttClient->connect();
+    
+    // Marquer comme en cours d'exécution
     $mqttRunning = true;
 }
 ?>
@@ -30,7 +54,9 @@ if (empty($output)) {
 <body>
     <div class="container">
         <?php if ($mqttRunning): ?>
-        <div id="status-message" class="status success">Client MQTT démarré en arrière-plan</div>
+        <div id="status-message" class="status success">Client MQTT démarré</div>
+        <?php else: ?>
+        <div id="status-message" class="status error">Client MQTT non démarré</div>
         <?php endif; ?>
         
         <header>
