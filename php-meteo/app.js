@@ -145,8 +145,9 @@ function addStationMarker() {
         weight: 2,
         opacity: 1,
         fillOpacity: 0.8,
-        interactive: true, // S'assurer que le cercle est interactif
-        bubblingMouseEvents: true // Permettre aux événements de souris de se propager
+        interactive: false, // Désactiver l'interactivité
+        draggable: false, // S'assurer que le marqueur n'est pas déplaçable
+        bubblingMouseEvents: false // Empêcher la propagation des événements de souris
     }).addTo(map);
     
     // Créer le contenu du popup
@@ -194,8 +195,9 @@ function updateStationMarker(temperature, humidity) {
             weight: 2,
             opacity: 1,
             fillOpacity: 0.8,
-            interactive: true, // S'assurer que le cercle est interactif
-            bubblingMouseEvents: true // Permettre aux événements de souris de se propager
+            interactive: false, // Désactiver l'interactivité
+            draggable: false, // S'assurer que le marqueur n'est pas déplaçable
+            bubblingMouseEvents: false // Empêcher la propagation des événements de souris
         }).addTo(map);
         
         // Ajouter le texte de température au centre du cercle
@@ -570,8 +572,9 @@ function fetchWeatherData() {
                     weight: 2,
                     opacity: 1,
                     fillOpacity: 0.8,
-                    interactive: true, // S'assurer que le cercle est interactif
-                    bubblingMouseEvents: true // Permettre aux événements de souris de se propager
+                    interactive: false, // Désactiver l'interactivité
+                    draggable: false, // S'assurer que le marqueur n'est pas déplaçable
+                    bubblingMouseEvents: false // Empêcher la propagation des événements de souris
                 }).addTo(map);
                 
                 // Ajouter le texte de température au centre du cercle

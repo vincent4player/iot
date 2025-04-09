@@ -1,0 +1,17 @@
+{
+  "name": "php-meteo",
+  "version": "1.0.0",
+  "description": "Application web qui affiche des données météorologiques en temps réel à partir d'un broker MQTT et de l'API OpenWeatherMap.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.8.4",
+    "dotenv": "^16.4.7",
+    "mqtt": "^5.10.4"
+  }
+}
