@@ -268,4 +268,25 @@ button:hover {
     .data-card p {
         font-size: 2rem;
     }
+}
+
+.status {
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.status.success {
+    background-color: var(--secondary-color);
+    color: white;
+    opacity: 1;
+}
+
+.status.error {
+    background-color: var(--danger-color);
+    color: white;
+    opacity: 1;
 } 
