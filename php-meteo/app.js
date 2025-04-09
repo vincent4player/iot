@@ -6,6 +6,24 @@ const mqttConfig = {
     topic: 'ynovbdxb2/meteo'
 };
 
+// Configuration des stations virtuelles
+const virtualStations = [
+    { 
+        name: 'Munich',
+        lat: 48.1351,
+        lon: 11.5820,
+        baseTemp: 15,
+        baseHumidity: 65
+    },
+    {
+        name: 'Milan',
+        lat: 45.4642,
+        lon: 9.1900,
+        baseTemp: 18,
+        baseHumidity: 60
+    }
+];
+
 // Configuration OpenWeatherMap
 const weatherConfig = {
     apiKey: 'c21a75b667d6f7abb81f118dcf8d4611',  // Clé API OpenWeatherMap
@@ -26,7 +44,9 @@ let map;
 let mqttClient;
 let temperatureChart;
 let humidityChart;
-let stationPosition = { name: 'Ma Station', lat: 44.8378, lon: -0.5792 }; // Position par défaut (Bordeaux)
+let virtualStationsInterval; // Pour stocker l'intervalle de mise à jour
+// Charger la position sauvegardée ou utiliser Bordeaux par défaut
+let stationPosition = JSON.parse(localStorage.getItem('stationPosition')) || { name: 'Bordeaux', lat: 44.8378, lon: -0.5792 };
 let db;
 let markers = []; // Pour stocker les références aux marqueurs
 
@@ -61,6 +81,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Gérer le formulaire de nom de station
     document.getElementById('saveStationName').addEventListener('click', saveStationName);
+    
+    // Mettre à jour le champ de saisie avec le nom de la ville actuelle
+    const nameInput = document.getElementById('stationName');
+    if (nameInput) {
+        nameInput.value = stationPosition.name;
+    }
+    
+    // Démarrer la mise à jour des stations virtuelles
+    updateVirtualStations(); // Première mise à jour immédiate
+    virtualStationsInterval = setInterval(updateVirtualStations, 5000); // Mise à jour toutes les 5 secondes
 });
 
 // Initialisation de la base de données IndexedDB
@@ -137,116 +167,174 @@ function initMap() {
 
 // Ajout du marqueur de notre station
 function addStationMarker() {
-    // Créer un cercle vert pour notre station avec une zone interactive plus grande
-    const circle = L.circleMarker([stationPosition.lat, stationPosition.lon], {
-        radius: 20,
-        fillColor: '#2ecc71', // Vert par défaut pour notre station
-        color: '#27ae60',
-        weight: 2,
-        opacity: 1,
-        fillOpacity: 0.8,
-        interactive: false, // Désactiver l'interactivité
-        draggable: false, // S'assurer que le marqueur n'est pas déplaçable
-        bubblingMouseEvents: false // Empêcher la propagation des événements de souris
+    // Créer un marqueur personnalisé qui combine le cercle et la température
+    const customIcon = L.divIcon({
+        html: `
+            <div class="custom-marker" style="
+                width: 40px;
+                height: 40px;
+                background-color: #2ecc71;
+                border: 2px solid #27ae60;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                font-size: 14px;">
+                --°
+            </div>
+        `,
+        className: 'custom-marker-container',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20]
+    });
+    
+    // Créer le marqueur unique
+    const marker = L.marker([stationPosition.lat, stationPosition.lon], {
+        icon: customIcon,
+        interactive: true
     }).addTo(map);
     
     // Créer le contenu du popup
     const popupContent = `<div class="popup-content"><b>${stationPosition.name}</b><br>Chargement des données...</div>`;
     
-    // Ajouter le popup au cercle
-    circle.bindPopup(popupContent, {
+    // Ajouter le popup au marqueur
+    marker.bindPopup(popupContent, {
         closeButton: true,
         autoClose: false,
         maxWidth: 200
     });
     
-    // Ajouter un événement de clic sur toute la zone du cercle
-    circle.on('click', function(e) {
-        console.log("Clic sur le marqueur de station");
-        this.openPopup();
-    });
-    
     // Stocker le marqueur
     markers.push({
         type: 'station',
-        circle: circle,
+        marker: marker,
         position: [stationPosition.lat, stationPosition.lon]
     });
 }
 
 // Mise à jour du popup et de la couleur de notre station
-function updateStationMarker(temperature, humidity) {
+function updateStationMarker(temperature, humidity, light) {
     // Trouver le marqueur de notre station
     const stationMarker = markers.find(m => m.type === 'station');
     if (stationMarker) {
         // Supprimer l'ancien marqueur
-        stationMarker.circle.remove();
+        stationMarker.marker.remove();
         
         // Déterminer la couleur en fonction de la température
         const tempValue = parseFloat(temperature);
         const fillColor = tempValue >= weatherConfig.tempThreshold ? '#e74c3c' : '#2ecc71';
         const color = tempValue >= weatherConfig.tempThreshold ? '#c0392b' : '#27ae60';
         
-        // Créer un nouveau cercle avec la bonne couleur
-        const circle = L.circleMarker([stationPosition.lat, stationPosition.lon], {
-            radius: 20,
-            fillColor: fillColor,
-            color: color,
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.8,
-            interactive: false, // Désactiver l'interactivité
-            draggable: false, // S'assurer que le marqueur n'est pas déplaçable
-            bubblingMouseEvents: false // Empêcher la propagation des événements de souris
-        }).addTo(map);
-        
-        // Ajouter le texte de température au centre du cercle
-        const icon = L.divIcon({
-            html: `<div style="color:white; font-weight:bold; font-size:14px;">${temperature}°</div>`,
-            className: 'temp-label',
+        // Créer un marqueur personnalisé qui combine le cercle et la température
+        const customIcon = L.divIcon({
+            html: `
+                <div class="custom-marker" style="
+                    width: 40px;
+                    height: 40px;
+                    background-color: ${fillColor};
+                    border: 2px solid ${color};
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 14px;">
+                    ${temperature}°
+                </div>
+            `,
+            className: 'custom-marker-container',
             iconSize: [40, 40],
-            iconAnchor: [20, 20]
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -20]
         });
         
-        const label = L.marker([stationPosition.lat, stationPosition.lon], {
-            icon: icon,
-            interactive: false // Le label ne doit pas être interactif pour éviter les conflits
+        // Créer le nouveau marqueur
+        const marker = L.marker([stationPosition.lat, stationPosition.lon], {
+            icon: customIcon,
+            interactive: true
         }).addTo(map);
         
-        // Créer le contenu du popup
-        const popupContent = `<div class="popup-content"><b>${stationPosition.name}</b><br>Température: ${temperature}°C<br>Humidité: ${humidity}%</div>`;
+        // Créer le contenu du popup avec la luminosité
+        const popupContent = `
+            <div class="popup-content">
+                <b>${stationPosition.name}</b><br>
+                Température: ${temperature}°C<br>
+                Humidité: ${humidity}%<br>
+                Luminosité: ${light} lux
+            </div>`;
         
-        // Ajouter le popup au cercle
-        circle.bindPopup(popupContent, {
+        // Ajouter le popup au marqueur
+        marker.bindPopup(popupContent, {
             closeButton: true,
             autoClose: false,
             maxWidth: 200
         });
         
-        // Ajouter un événement de clic sur toute la zone du cercle
-        circle.on('click', function(e) {
-            console.log("Clic sur le marqueur de station mis à jour");
-            this.openPopup();
-        });
-        
         // Mettre à jour le marqueur dans le tableau
-        stationMarker.circle = circle;
-        stationMarker.label = label;
+        stationMarker.marker = marker;
     }
 }
 
 // Enregistrement du nom de la station
-function saveStationName() {
+async function saveStationName() {
     const nameInput = document.getElementById('stationName');
-    stationPosition.name = nameInput.value || 'Ma Station';
+    const cityName = nameInput.value || 'Bordeaux';
     
-    // Recréer la carte pour mettre à jour le marqueur
-    map.remove();
-    markers = []; // Réinitialiser les marqueurs
-    initMap();
-    
-    // Recharger les données météo
-    fetchWeatherData();
+    try {
+        // Utiliser l'API de géocodage d'OpenWeatherMap pour obtenir les coordonnées
+        const response = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(cityName)}&limit=1&appid=${weatherConfig.apiKey}`);
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+            // Mettre à jour la position et le nom de la station
+            stationPosition = {
+                name: cityName,
+                lat: data[0].lat,
+                lon: data[0].lon
+            };
+            
+            // Sauvegarder la position dans le localStorage
+            localStorage.setItem('stationPosition', JSON.stringify(stationPosition));
+            
+            // Recréer la carte pour mettre à jour le marqueur
+            map.remove();
+            markers = []; // Réinitialiser les marqueurs
+            initMap();
+            
+            // Recharger les données météo
+            fetchWeatherData();
+            
+            // Mettre à jour le statut
+            const statusMessage = document.getElementById('status-message');
+            if (statusMessage) {
+                statusMessage.textContent = `Station déplacée à ${cityName}`;
+                statusMessage.className = 'status success';
+                setTimeout(() => {
+                    statusMessage.className = 'status';
+                }, 3000);
+            }
+
+            // Mettre à jour la valeur du champ de saisie
+            nameInput.value = cityName;
+        } else {
+            throw new Error('Ville non trouvée');
+        }
+    } catch (error) {
+        console.error('Erreur lors de la géolocalisation:', error);
+        // Afficher un message d'erreur
+        const statusMessage = document.getElementById('status-message');
+        if (statusMessage) {
+            statusMessage.textContent = `Erreur: impossible de trouver la ville "${cityName}"`;
+            statusMessage.className = 'status error';
+            setTimeout(() => {
+                statusMessage.className = 'status';
+            }, 3000);
+        }
+    }
 }
 
 // Connexion au broker MQTT
@@ -275,21 +363,24 @@ function connectMqtt() {
                 const payload = JSON.parse(message.toString());
                 const temperature = parseFloat(payload.temperature).toFixed(1);
                 const humidity = parseFloat(payload.humidity).toFixed(1);
+                const light = parseFloat(payload.light).toFixed(0); // Ajout de la luminosité
                 
-                console.log("Message MQTT reçu:", { temperature, humidity });
+                console.log("Message MQTT reçu:", { temperature, humidity, light });
                 
                 // Mettre à jour l'interface
                 document.getElementById('mqtt-temperature').textContent = `${temperature} °C`;
                 document.getElementById('mqtt-humidity').textContent = `${humidity} %`;
+                document.getElementById('mqtt-light').textContent = `${light} lux`; // Ajout de l'affichage de la luminosité
                 document.getElementById('mqtt-last-update').textContent = new Date().toLocaleTimeString();
                 
-                // Mettre à jour le marqueur sur la carte
-                updateStationMarker(temperature, humidity);
+                // Mettre à jour le marqueur sur la carte avec la luminosité
+                updateStationMarker(temperature, humidity, light);
                 
                 // Sauvegarder les données dans la base de données
                 saveDataToDb({
                     temperature: parseFloat(temperature),
-                    humidity: parseFloat(humidity)
+                    humidity: parseFloat(humidity),
+                    light: parseFloat(light) // Ajout de la luminosité dans la sauvegarde
                 }).then(() => {
                     // Mettre à jour les graphiques avec les nouvelles données
                     getHistoricalData().then(data => {
@@ -316,6 +407,9 @@ function initCharts() {
     const commonOptions = {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+            duration: 0 // Désactiver les animations pour une meilleure performance
+        },
         plugins: {
             legend: {
                 position: 'top',
@@ -344,6 +438,7 @@ function initCharts() {
                         return `Heure: ${tooltipItems[0].label}`;
                     },
                     label: function(context) {
+                        if (context.parsed.y === null) return null;
                         const label = context.dataset.label || '';
                         const value = context.parsed.y;
                         return `${label}: ${value}${context.dataset.label.includes('Température') ? '°C' : '%'}`;
@@ -384,11 +479,12 @@ function initCharts() {
         },
         elements: {
             point: {
-                radius: 4,
-                hoverRadius: 6
+                radius: 3,
+                hoverRadius: 5
             },
             line: {
-                tension: 0.3
+                tension: 0.3,
+                spanGaps: true // Permet de connecter les points même s'il y a des valeurs nulles
             }
         }
     };
@@ -478,45 +574,61 @@ function initCharts() {
 function updateCharts(data) {
     if (!data || data.length === 0) return;
     
-    // Regrouper les données par heure
+    // Regrouper les données par heure et limiter à 24 dernières heures
     const groupedData = groupDataByHour(data);
+    const last24Hours = groupedData.slice(-24);
     
     // Extraire les labels et les valeurs moyennes
-    const labels = groupedData.map(item => item.hour);
-    const temperatures = groupedData.map(item => item.avgTemp);
-    const humidities = groupedData.map(item => item.avgHumidity);
+    const labels = last24Hours.map(item => item.hour);
+    const temperatures = last24Hours.map(item => item.avgTemp);
+    const humidities = last24Hours.map(item => item.avgHumidity);
     
     // Mettre à jour le graphique de température
     temperatureChart.data.labels = labels;
     temperatureChart.data.datasets[0].data = temperatures;
-    temperatureChart.update();
+    
+    // Calculer les limites min/max pour l'axe Y de la température
+    const tempMin = Math.min(...temperatures) - 2;
+    const tempMax = Math.max(...temperatures) + 2;
+    temperatureChart.options.scales.y.min = Math.floor(tempMin);
+    temperatureChart.options.scales.y.max = Math.ceil(tempMax);
+    
+    temperatureChart.update('none'); // 'none' pour une mise à jour plus fluide
     
     // Mettre à jour le graphique d'humidité
     humidityChart.data.labels = labels;
     humidityChart.data.datasets[0].data = humidities;
-    humidityChart.update();
+    humidityChart.update('none');
 }
 
 // Fonction pour regrouper les données par heure
 function groupDataByHour(data) {
-    // Trier les données par timestamp
-    const sortedData = [...data].sort((a, b) => a.timestamp - b.timestamp);
+    // Obtenir l'heure il y a 24 heures
+    const twentyFourHoursAgo = new Date();
+    twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
+    
+    // Filtrer les données des dernières 24 heures
+    const recentData = data.filter(item => item.timestamp >= twentyFourHoursAgo.getTime());
     
     // Créer un objet pour stocker les données regroupées
     const groupedByHour = {};
     
-    // Parcourir toutes les données et les regrouper par heure
-    sortedData.forEach(item => {
+    // Initialiser toutes les heures des dernières 24h avec des valeurs vides
+    for (let i = 0; i < 24; i++) {
+        const date = new Date();
+        date.setHours(date.getHours() - i);
+        const hourKey = `${date.getHours().toString().padStart(2, '0')}:00`;
+        groupedByHour[hourKey] = {
+            sumTemp: 0,
+            sumHumidity: 0,
+            count: 0
+        };
+    }
+    
+    // Parcourir les données récentes et les regrouper par heure
+    recentData.forEach(item => {
         const date = new Date(item.timestamp);
-        const hourKey = `${date.getHours()}:00`;
-        
-        if (!groupedByHour[hourKey]) {
-            groupedByHour[hourKey] = {
-                sumTemp: 0,
-                sumHumidity: 0,
-                count: 0
-            };
-        }
+        const hourKey = `${date.getHours().toString().padStart(2, '0')}:00`;
         
         groupedByHour[hourKey].sumTemp += item.temperature;
         groupedByHour[hourKey].sumHumidity += item.humidity;
@@ -524,19 +636,16 @@ function groupDataByHour(data) {
     });
     
     // Convertir l'objet en tableau et calculer les moyennes
-    const result = Object.keys(groupedByHour).map(hour => {
-        const group = groupedByHour[hour];
-        return {
-            hour: hour,
-            avgTemp: (group.sumTemp / group.count).toFixed(1),
-            avgHumidity: (group.sumHumidity / group.count).toFixed(1)
-        };
-    });
+    const result = Object.entries(groupedByHour).map(([hour, group]) => ({
+        hour: hour,
+        avgTemp: group.count > 0 ? (group.sumTemp / group.count).toFixed(1) : null,
+        avgHumidity: group.count > 0 ? (group.sumHumidity / group.count).toFixed(1) : null
+    }));
     
     // Trier par heure
     return result.sort((a, b) => {
-        const hourA = parseInt(a.hour.split(':')[0]);
-        const hourB = parseInt(b.hour.split(':')[0]);
+        const hourA = parseInt(a.hour);
+        const hourB = parseInt(b.hour);
         return hourA - hourB;
     });
 }
@@ -546,7 +655,6 @@ function fetchWeatherData() {
     // Supprimer les marqueurs de villes existants
     markers.filter(m => m.type === 'city').forEach(m => {
         if (m.circle) m.circle.remove();
-        if (m.label) m.label.remove();
     });
     
     // Filtrer les marqueurs pour ne garder que celui de la station
@@ -559,59 +667,55 @@ function fetchWeatherData() {
                 const temperature = data.main.temp.toFixed(1);
                 const humidity = data.main.humidity.toFixed(1);
                 
-                // Déterminer la couleur en fonction de la température
-                const tempValue = parseFloat(temperature);
-                const fillColor = tempValue >= weatherConfig.tempThreshold ? '#e74c3c' : '#2ecc71';
-                const color = tempValue >= weatherConfig.tempThreshold ? '#c0392b' : '#27ae60';
+                // Utiliser une couleur bleue pour toutes les villes
+                const fillColor = '#3498db'; // Bleu clair
+                const color = '#2980b9';     // Bleu foncé pour la bordure
                 
-                // Créer un cercle pour la ville avec une zone interactive plus grande
-                const circle = L.circleMarker([city.lat, city.lon], {
-                    radius: 20,
-                    fillColor: fillColor,
-                    color: color,
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.8,
-                    interactive: false, // Désactiver l'interactivité
-                    draggable: false, // S'assurer que le marqueur n'est pas déplaçable
-                    bubblingMouseEvents: false // Empêcher la propagation des événements de souris
-                }).addTo(map);
-                
-                // Ajouter le texte de température au centre du cercle
-                const icon = L.divIcon({
-                    html: `<div style="color:white; font-weight:bold; font-size:14px;">${temperature}°</div>`,
-                    className: 'temp-label',
+                // Créer un marqueur personnalisé qui combine le cercle et la température
+                const customIcon = L.divIcon({
+                    html: `
+                        <div class="custom-marker" style="
+                            width: 40px;
+                            height: 40px;
+                            background-color: ${fillColor};
+                            border: 2px solid ${color};
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: white;
+                            font-weight: bold;
+                            font-size: 14px;">
+                            ${temperature}°
+                        </div>
+                    `,
+                    className: 'custom-marker-container',
                     iconSize: [40, 40],
-                    iconAnchor: [20, 20]
+                    iconAnchor: [20, 20],
+                    popupAnchor: [0, -20]
                 });
                 
-                const label = L.marker([city.lat, city.lon], {
-                    icon: icon,
-                    interactive: false // Le label ne doit pas être interactif pour éviter les conflits
+                // Créer le marqueur unique
+                const marker = L.marker([city.lat, city.lon], {
+                    icon: customIcon,
+                    interactive: true
                 }).addTo(map);
                 
                 // Créer le contenu du popup
                 const popupContent = `<div class="popup-content"><b>${city.name}</b><br>Température: ${temperature}°C<br>Humidité: ${humidity}%</div>`;
                 
-                // Ajouter le popup au cercle
-                circle.bindPopup(popupContent, {
+                // Ajouter le popup au marqueur
+                marker.bindPopup(popupContent, {
                     closeButton: true,
                     autoClose: false,
                     maxWidth: 200
-                });
-                
-                // Ajouter un événement de clic sur toute la zone du cercle
-                circle.on('click', function(e) {
-                    console.log(`Clic sur le marqueur de ${city.name}`);
-                    this.openPopup();
                 });
                 
                 // Stocker le marqueur
                 markers.push({
                     type: 'city',
                     name: city.name,
-                    circle: circle,
-                    label: label,
+                    circle: marker,
                     position: [city.lat, city.lon]
                 });
             })
@@ -619,4 +723,90 @@ function fetchWeatherData() {
                 console.error(`Erreur lors de la récupération des données pour ${city.name}:`, error);
             });
     });
-} 
+}
+
+// Fonction pour générer des données sinusoïdales
+function generateSinusoidalData(baseValue, amplitude = 2, period = 3600000) {
+    const now = Date.now();
+    const variation = amplitude * Math.sin((2 * Math.PI * now) / period);
+    return (baseValue + variation).toFixed(1);
+}
+
+// Fonction pour mettre à jour les stations virtuelles
+function updateVirtualStations() {
+    virtualStations.forEach(station => {
+        const temperature = generateSinusoidalData(station.baseTemp);
+        const humidity = generateSinusoidalData(station.baseHumidity);
+        
+        // Créer un marqueur personnalisé pour la station virtuelle
+        const customIcon = L.divIcon({
+            html: `
+                <div class="custom-marker" style="
+                    width: 40px;
+                    height: 40px;
+                    background-color: #9b59b6;
+                    border: 2px solid #8e44ad;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 14px;">
+                    ${temperature}°
+                </div>
+            `,
+            className: 'custom-marker-container',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -20]
+        });
+
+        // Trouver le marqueur existant ou en créer un nouveau
+        let existingMarker = markers.find(m => m.type === 'virtual' && m.name === station.name);
+        
+        if (existingMarker) {
+            existingMarker.marker.remove();
+        }
+
+        // Créer le nouveau marqueur
+        const marker = L.marker([station.lat, station.lon], {
+            icon: customIcon,
+            interactive: true
+        }).addTo(map);
+
+        // Créer le contenu du popup
+        const popupContent = `
+            <div class="popup-content">
+                <b>${station.name}</b> (Station Virtuelle)<br>
+                Température: ${temperature}°C<br>
+                Humidité: ${humidity}%
+            </div>`;
+
+        // Ajouter le popup au marqueur
+        marker.bindPopup(popupContent, {
+            closeButton: true,
+            autoClose: false,
+            maxWidth: 200
+        });
+
+        // Mettre à jour ou ajouter le marqueur dans le tableau
+        if (existingMarker) {
+            existingMarker.marker = marker;
+        } else {
+            markers.push({
+                type: 'virtual',
+                name: station.name,
+                marker: marker,
+                position: [station.lat, station.lon]
+            });
+        }
+    });
+}
+
+// Nettoyage lors de la fermeture de l'application
+window.addEventListener('beforeunload', () => {
+    if (virtualStationsInterval) {
+        clearInterval(virtualStationsInterval);
+    }
+}); 
