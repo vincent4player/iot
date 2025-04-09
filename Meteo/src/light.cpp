@@ -16,10 +16,10 @@ void Light::begin() {
 
 void Light::readSensor() {
     digitalWrite(csPin, LOW);
-    for (int i = 0; i < 2; i++) {
-        recu[i] = SPI.transfer(0);
-    }
+    recu[0] = SPI.transfer(0);
+    recu[1] = SPI.transfer(0);
     digitalWrite(csPin, HIGH);
+    
     lumiere = (recu[0] << 3) | (recu[1] >> 4);
 }
 
