@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Station Météo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Station Météo</h1>
+    </header>
+    
+    <main>
+        <section class="mqtt-station">
+            <h2>Ma Station Météo</h2>
+            <div class="form-group">
+                <label for="stationName">Nom de la ville:</label>
+                <input type="text" id="stationName" value="Ma Station" placeholder="Entrez le nom de votre ville">
+                <button id="saveStationName">Enregistrer</button>
+            </div>
+            <div class="live-data">
+                <div class="data-card">
+                    <h3>Température</h3>
+                    <p id="mqtt-temperature">-- °C</p>
+                </div>
+                <div class="data-card">
+                    <h3>Humidité</h3>
+                    <p id="mqtt-humidity">-- %</p>
+                </div>
+                <div class="data-card">
+                    <h3>Dernière mise à jour</h3>
+                    <p id="mqtt-last-update">--</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="map-container">
+            <h2>Carte des stations</h2>
+            <div id="map"></div>
+        </section>
+
+        <section class="charts-container">
+            <h2>Graphiques</h2>
+            <div class="chart-wrapper">
+                <canvas id="temperatureChart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="humidityChart"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Station Météo</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/idb@7/build/umd.js"></script>
+    <script src="app.js"></script>
+</body>
+</html> 

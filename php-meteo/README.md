@@ -1,124 +1,35 @@
-# Station Météo MQTT
+# Station Météo Interactive
 
-Une application web PHP qui affiche les données de température et d'humidité reçues via MQTT, avec une carte OpenStreetMap et des graphiques historiques.
+Application web qui affiche des données météorologiques en temps réel à partir d'un broker MQTT et de l'API OpenWeatherMap.
 
 ## Fonctionnalités
 
-- Affichage des données météo en temps réel via MQTT
-- Carte interactive avec marqueurs pour les grandes villes françaises (via OpenWeatherMap)
-- Graphiques d'historique pour la température et l'humidité
-- Stockage des données dans une base SQLite
-- Personnalisation de la station MQTT (nom et ville)
-- Lancement automatique du client MQTT en arrière-plan
+- Affichage en temps réel des données de température et d'humidité via MQTT
+- Carte interactive OpenStreetMap avec cercles colorés pour représenter les stations
+- Affichage de la température dans les cercles (vert pour normale, rouge pour élevée)
+- Graphiques de température et d'humidité avec historique
+- Stockage local des données dans IndexedDB
+- Possibilité de personnaliser le nom de votre station météo
 
-## Prérequis
+## Configuration
 
-- PHP 7.4 ou supérieur
-- Extension SQLite pour PHP
-- Extension cURL pour PHP
-- Serveur web (Apache, Nginx, etc.)
-- Un broker MQTT en ligne (HiveMQ, EMQ X, etc.)
+L'application est configurée pour se connecter au broker MQTT suivant :
+- Host: broker.emqx.io
+- Port: 8083 (WebSocket)
+- Topic: ynovbdxb2/meteo
 
-## Installation
+Les données météo des villes suivantes sont affichées sur la carte :
+- Paris
+- Lyon
+- Nantes
+- Marseille
+- Toulouse
+- Bourges
+- Nancy
 
-1. Clonez ou téléchargez ce dépôt dans votre répertoire web :
-   ```
-   git clone https://github.com/votre-utilisateur/station-meteo-mqtt.git
-   ```
+## Format des messages MQTT
 
-2. Assurez-vous que les dossiers `db` et `logs` sont accessibles en écriture par le serveur web :
-   ```
-   chmod 777 db logs
-   ```
-
-3. Modifiez les fichiers de configuration pour vos paramètres :
-   - `includes/config.php` : Remplacez les paramètres MQTT et votre clé API OpenWeatherMap
-   - `js/config.js` : Modifiez les paramètres MQTT pour le client WebSocket
-
-4. Ouvrez l'application dans votre navigateur :
-   ```
-   http://localhost/php-meteo/
-   ```
-
-## Configuration MQTT
-
-### Où modifier les paramètres MQTT
-
-Les paramètres de connexion MQTT doivent être configurés à deux endroits :
-
-1. **Côté serveur** : dans le fichier `includes/config.php`
-   ```php
-   define('MQTT_HOST', 'broker.emqx.io');          // Adresse du broker MQTT
-   define('MQTT_PORT', 1883);                       // Port du broker MQTT (généralement 1883)
-   define('MQTT_CLIENT_ID', 'mqttx_f6c62fdf');     // ID client unique
-   define('MQTT_TOPIC', 'ynovbdxb2/meteo');        // Topic à écouter
-   ```
-
-2. **Côté client** : dans le fichier `js/config.js`
-   ```javascript
-   mqtt: {
-       host: 'broker.emqx.io',                        // Adresse du broker MQTT
-       port: 8083,                                     // Port WebSocket (généralement 8083)
-       clientId: 'web_' + Math.random().toString(16).substr(2, 8), // ID client aléatoire
-       topic: 'ynovbdxb2/meteo'                        // Topic à écouter
-   }
-   ```
-
-> **Important** : Assurez-vous que le `topic` est identique dans les deux fichiers.
-
-### Client MQTT automatique
-
-Le client MQTT PHP est lancé automatiquement en arrière-plan lorsque vous chargez la page `index.php`. Vous n'avez pas besoin de le démarrer manuellement. Les logs du client MQTT sont enregistrés dans le fichier `logs/mqtt.log`.
-
-### Configuration de l'API météo
-
-Pour obtenir les données météo des villes françaises, vous devez créer un compte sur [OpenWeatherMap](https://openweathermap.org/) et obtenir une clé API gratuite. Ensuite, mettez à jour le fichier `includes/config.php` avec votre clé API.
-
-## Utilisation
-
-### Interface utilisateur
-
-L'interface utilisateur est divisée en plusieurs parties :
-
-1. **Carte** : Affiche les marqueurs pour les grandes villes françaises avec leurs données météo, ainsi qu'un marqueur spécial pour la station MQTT.
-2. **Station MQTT** : Affiche les dernières données reçues via MQTT et permet de configurer le nom et la ville de la station.
-3. **Graphiques** : Affichent l'historique de température et d'humidité des dernières 24 heures.
-
-## Structure du projet
-
-```
-php-meteo/
-│
-├── css/
-│   └── style.css               # Styles CSS
-│
-├── db/
-│   └── meteo.db                # Base de données SQLite (créée automatiquement)
-│
-├── includes/
-│   ├── ajax_handler.php        # Gestionnaire de requêtes AJAX
-│   ├── config.php              # Configuration de l'application
-│   ├── functions.php           # Fonctions utilitaires
-│   └── mqtt_client.php         # Client MQTT pour PHP
-│
-├── js/
-│   ├── app.js                  # Application principale JavaScript
-│   ├── charts.js               # Gestion des graphiques
-│   ├── config.js               # Configuration côté client
-│   ├── map.js                  # Gestion de la carte
-│   └── mqtt.js                 # Client MQTT pour le navigateur
-│
-├── logs/                       # Répertoire pour les logs (créé automatiquement)
-│
-├── index.php                   # Page principale et démarrage du client MQTT
-├── mqtt_listener.php           # Script d'écoute MQTT utilisé en arrière-plan
-└── README.md                   # Ce fichier
-```
-
-## Format des données MQTT
-
-L'application attend des messages MQTT au format JSON avec la structure suivante :
-
+L'application attend des messages MQTT au format JSON suivant :
 ```json
 {
   "temperature": 24.80,
@@ -126,6 +37,38 @@ L'application attend des messages MQTT au format JSON avec la structure suivante
 }
 ```
 
-## Licence
+## Utilisation
 
-Ce projet est sous licence MIT. Voir le fichier LICENSE pour plus de détails. 
+1. Ouvrez le fichier `index.html` dans votre navigateur
+2. L'application se connectera automatiquement au broker MQTT
+3. Les données reçues s'afficheront dans la section "Ma Station Météo"
+4. Vous pouvez modifier le nom de votre station en saisissant un nouveau nom et en cliquant sur "Enregistrer"
+5. Les graphiques se mettront à jour automatiquement avec les données reçues
+6. Sur la carte, les cercles sont verts pour des températures normales et rouges lorsqu'elles dépassent 25°C
+
+## Sécurité
+
+Notez que cette application utilise IndexedDB pour stocker les données localement dans votre navigateur. Aucune donnée n'est envoyée à un serveur externe, à l'exception des requêtes à l'API OpenWeatherMap pour récupérer les données météorologiques des villes.
+
+## Technologies utilisées
+
+- HTML5, CSS3, JavaScript
+- Leaflet.js pour la carte OpenStreetMap
+- MQTT.js pour la communication MQTT
+- Chart.js pour les graphiques
+- IndexedDB (via idb) pour le stockage local
+- API OpenWeatherMap pour les données météo des villes
+
+## Personnalisation
+
+Pour modifier la position par défaut de votre station météo, éditez la variable `stationPosition` dans le fichier `app.js`.
+
+```javascript
+let stationPosition = { name: 'Ma Station', lat: 44.8378, lon: -0.5792 }; // Position par défaut (Bordeaux)
+```
+
+Pour modifier le seuil de température à partir duquel les cercles deviennent rouges, ajustez la propriété `tempThreshold` dans la configuration :
+
+```javascript
+tempThreshold: 25 // Seuil de température (en °C) à partir duquel le cercle devient rouge
+``` 
