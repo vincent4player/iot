@@ -1,6 +1,7 @@
 #include "../lib/light.h"
 #include <Arduino.h>
 #include <SPI.h>
+
 #define CS 5
 
 Light::Light(int cs) : csPin(cs) {}
@@ -23,10 +24,18 @@ void Light::readSensor() {
 }
 
 void Light::printValues() {
-    Serial.print("Lumiere = ");
+    Serial.print("Lumière (brute) = ");
     Serial.println(lumiere);
+
+    float lux = getLux();
+    Serial.print("Éclairement (lux) = ");
+    Serial.println(lux);
 }
 
 int Light::getLightValue() {
     return lumiere;
+}
+
+float Light::getLux() {
+    return lumiere * facteur_conversion;
 }
