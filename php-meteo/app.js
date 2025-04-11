@@ -778,7 +778,7 @@ function updateVirtualStations() {
         // Créer le contenu du popup
         const popupContent = `
             <div class="popup-content">
-                <b>${station.name}</b> (Station Virtuelle)<br>
+                <b>${station.name}</b>Station météo<br>
                 Température: ${temperature}°C<br>
                 Humidité: ${humidity}%
             </div>`;
